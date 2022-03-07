@@ -20,14 +20,30 @@ type Metric struct {
 	TS    int32
 }
 
-func LoadAVG_1m() *Metric {
-
+func loadContent() []byte {
 	content, err := ioutil.ReadFile(loadAvgFile)
 	if err != nil {
 		log.Fatalln(err)
 		os.Exit(1)
 	}
-	s := string(content)
+	return content
+}
+
+// !TODO zarefa4it eto govno
+
+func LoadAvg_5m() *Metric {
+	s := string(loadContent())
+	items := strings.Split(s, " ")
+	la5m, _ := strconv.ParseFloat(items[1], 32)
+	return &Metric{
+		Name:  "loadavg_5m",
+		Value: float32(la5m),
+		TS:    int32(time.Now().Unix()),
+	}
+}
+
+func LoadAVG_1m() *Metric {
+	s := string(loadContent())
 	items := strings.Split(s, " ")
 	la1m, _ := strconv.ParseFloat(items[0], 32)
 	return &Metric{

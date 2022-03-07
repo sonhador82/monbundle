@@ -7,6 +7,7 @@ import (
 	"log"
 	"monbundle/metrics"
 	"os"
+	"time"
 
 	"github.com/wcharczuk/go-chart/v2"
 	"gorm.io/driver/sqlite"
@@ -21,36 +22,74 @@ func main() {
 	}
 
 	var m []metrics.Metric
+	var m5m []metrics.Metric
 
-	db.Find(&m)
+	db.Debug().Where("name = ?", "loadavg_5m").Find(&m5m)
+	fmt.Println(m5m)
 
-	var xVals = make([]float64, 5)
-	var yVals = make([]float64, 5)
+	db.Debug().Where("name = ?", "loadavg_1m").Find(&m)
+
+	xVals := [100]time.Time{}
+	yVals := [100]float64{}
 
 	for i, v := range m {
-		fmt.Printf("i: %v, v: %v\n", i, v.Value)
-		yVals = append(yVals, float64(v.Value))
-		xVals = append(xVals, float64(i))
+		if i < 100 {
+			fmt.Printf("i: %v, v: %v\n", i, v.Value)
+			yVals[i] = float64(v.Value)
+			xVals[i] = time.Unix(int64(v.TS), 0)
+
+		}
+		//		yVals = append(yVals, float64(v.Value))
+		//		xVals = append(xVals, time.Unix(int64(v.TS), 0))
 	}
-	fmt.Println(m[0].Value)
-	fmt.Println(len(m))
-	fmt.Println(yVals)
+
+	x5mVals := [100]time.Time{}
+	y5mVals := [100]float64{}
+	for i, v := range m5m {
+		if i < 100 {
+			y5mVals[i] = float64(v.Value)
+			x5mVals[i] = time.Unix(int64(v.TS), 0)
+		}
+	}
 
 	graph := chart.Chart{
+		Title: "LA 1/5/15 minute",
+		TitleStyle: chart.Style{
+			FontSize: 8.0,
+		},
 
+		Width:  600,
+		Height: 150,
+		XAxis: chart.XAxis{
+			ValueFormatter: chart.TimeMinuteValueFormatter,
+		},
 		Series: []chart.Series{
-
-			chart.ContinuousSeries{
-				Style: chart.Style{
-
-					StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
-					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
-				},
-				XValues: xVals,
-				YValues: yVals,
+			chart.TimeSeries{
+				XValues: xVals[:100],
+				YValues: yVals[:100],
+			},
+			chart.TimeSeries{
+				XValues: x5mVals[:100],
+				YValues: y5mVals[:100],
 			},
 		},
 	}
+
+	// graph := chart.Chart{
+
+	// 	Series: []chart.Series{
+
+	// 		chart.ContinuousSeries{
+	// 			Style: chart.Style{
+
+	// 				StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
+	// 				FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
+	// 			},
+	// 			XValues: xVals,
+	// 			YValues: yVals,
+	// 		},
+	// 	},
+	// }
 
 	buffer := bytes.NewBuffer([]byte{})
 	err = graph.Render(chart.PNG, buffer)
@@ -64,4 +103,14 @@ func main() {
 		log.Fatalln(err)
 		os.Exit(1)
 	}
+
+	// http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Add("Content-Type", "image/png")
+	// 	_, err := w.Write(buffer.Bytes())
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// })
+
+	// log.Fatal(http.ListenAndServe(":8000", nil))
 }
