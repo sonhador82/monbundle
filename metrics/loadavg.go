@@ -7,18 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 const loadAvgFile = "/proc/loadavg"
-
-type Metric struct {
-	gorm.Model
-	Name  string
-	Value float32
-	TS    int32
-}
 
 func loadContent() []byte {
 	content, err := ioutil.ReadFile(loadAvgFile)

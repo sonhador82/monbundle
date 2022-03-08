@@ -10,6 +10,15 @@ import (
 
 const scanFreq = time.Second * 5
 
+func runNetStat() {
+	for {
+		netstat := metrics.LoadNetDevStat("wlp2s0")
+		fmt.Println(netstat)
+		monbundle.DbInst().UpdateCounterMetrics(netstat)
+		time.Sleep(scanFreq)
+	}
+}
+
 func runLA() {
 	for {
 		la1m := metrics.LoadAVG_1m()
@@ -35,8 +44,9 @@ func main() {
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(2)
+	wg.Add(3)
 	go runLA()
+	go runNetStat()
 	go dataGc()
 	wg.Wait()
 }

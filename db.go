@@ -13,6 +13,7 @@ import (
 
 type DbInstance interface {
 	UpdateMetric(m *metrics.Metric) error
+	UpdateCounterMetrics(m []*metrics.CounterMetric)
 	CleanUpMetrics()
 }
 
@@ -28,6 +29,13 @@ func (dbInstance *dbInstance) UpdateMetric(m *metrics.Metric) error {
 	dbInstance.db.Create(&m)
 
 	return nil
+}
+
+func (dbInstance *dbInstance) UpdateCounterMetrics(m []*metrics.CounterMetric) {
+	// migrate
+	dbInstance.db.AutoMigrate(&metrics.CounterMetric{})
+
+	dbInstance.db.Create(&m)
 }
 
 func (dbInstance *dbInstance) CleanUpMetrics() {
