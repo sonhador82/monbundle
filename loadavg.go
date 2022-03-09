@@ -48,33 +48,49 @@ func LoadAvg() []*FloatMetric {
 	}
 }
 
-func getSeries(name string)
+func getSeries(name string) ([]time.Time, []float64) {
+	dbConn := DbInst().GetDB()
+	var m []FloatMetric
+	dbConn.Debug().Where("name = ?", name).Find(&m)
+	dataTS := make([]time.Time, 0)
+	dataVal := make([]float64, 0)
+	for _, v := range m {
+		dataTS = append(dataTS, v.TS)
+		dataVal = append(dataVal, v.Value)
+	}
+	return dataTS, dataVal
+}
 
 func RenderLAChart() []byte {
-	db_conn := DbInst().GetDB()
-	var m1m []FloatMetric
-	var m5m []db.FloatMetric
-	var m15m []db.FloatMetric
-
-	db_conn.Debug().Where("name = ?", "loadavg_1m").Find(&m1m)
-	data1mTS := make([]time.Time, 0)
-	data1mVal := make([]float64, 0)
-	for _, v := range m1m {
-		data1mTS = append(data1mTS, v.TS)
-	}
-	for _, v := range m1m {
-		data1mVal = append(data1mVal, v.Value)
-	}
+	data1mTS, data1mVal := getSeries("loadavg_1m")
+	data5mTS, data5mVal := getSeries("loadavg_5m")
+	data15mTS, data15mVal := getSeries("loadavg_15m")
 
 	graph := chart.Chart{
-		Title: "LA 1m/5m/15m",
+		Height: 200,
+		Width:  480,
+		Title:  "LA 1m/5m/15m",
+		TitleStyle: chart.Style{
+			FontSize: 8.0,
+		},
 		XAxis: chart.XAxis{
 			ValueFormatter: chart.TimeMinuteValueFormatter,
+			Style: chart.Style{
+				FontSize: 6.0,
+			},
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
 				XValues: data1mTS,
 				YValues: data1mVal,
+			},
+			chart.TimeSeries{
+				XValues: data5mTS,
+				YValues: data5mVal,
+			},
+			chart.TimeSeries{
+				XValues: data15mTS,
+				YValues: data15mVal,
 			},
 		},
 	}
@@ -87,20 +103,3 @@ func RenderLAChart() []byte {
 	}
 	return buffer.Bytes()
 }
-
-// graph := chart.Chart{
-// 	Title: "LA 1/5/15 minutes",
-// 	XAxis: chart.XAxis{
-// 		ValueFormatter: chart.TimeMinuteValueFormatter,
-// 	},
-// 	Series: []chart.Series{
-// 		chart.TimeSeries{
-// 			XValues: xVals[:100],
-// 			YValues: yVals[:100],
-// 		},
-// 		chart.TimeSeries{
-// 			XValues: x5mVals[:100],
-// 			YValues: y5mVals[:100],
-// 		},
-// 	},
-// }

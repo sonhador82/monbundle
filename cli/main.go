@@ -31,9 +31,15 @@ func runLA() {
 }
 
 func main() {
+
 	wg := sync.WaitGroup{}
 
+	scrapers := []interface{}{runLA}
+	wg.Add(len(scrapers))
+	for _, fn := range scrapers {
+		go fn.(func())()
+	}
 	wg.Add(1)
-	go runLA()
+	go monbundle.Serve()
 	wg.Wait()
 }
