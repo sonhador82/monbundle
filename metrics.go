@@ -1,9 +1,7 @@
-package metrics
+package monbundle
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type CounterMetric struct {
@@ -13,9 +11,9 @@ type CounterMetric struct {
 	TS    time.Time
 }
 
-type Metric struct {
-	gorm.Model
+type FloatMetric struct {
+	ID    uint64
 	Name  string
-	Value float32
-	TS    int32
+	Value float64
+	TS    time.Time
 }

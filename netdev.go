@@ -1,4 +1,4 @@
-package metrics
+package monbundle
 
 import (
 	"fmt"
