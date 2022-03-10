@@ -18,7 +18,7 @@ type BlockDev struct {
 }
 
 func getSectorSize(devName string) int {
-	raw, err := os.ReadFile(fmt.Sprintf("/sys/block/%s/queue/physical_block_size", devName))
+	raw, err := os.ReadFile(fmt.Sprintf("/sys/block/%s/queue/hw_sector_size", devName))
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
