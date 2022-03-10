@@ -30,11 +30,20 @@ func runLA() {
 	}
 }
 
+func diskStats() {
+	log.Println("Start DisksStats scraping...")
+	for {
+		metrics := monbundle.LoadDiskStats()
+		monbundle.DbInst().UpdateCounterMetrics(metrics)
+		time.Sleep(scanFreq)
+	}
+}
+
 func main() {
 
 	wg := sync.WaitGroup{}
 
-	scrapers := []interface{}{runLA}
+	scrapers := []interface{}{runLA, diskStats}
 	wg.Add(len(scrapers))
 	for _, fn := range scrapers {
 		go fn.(func())()
