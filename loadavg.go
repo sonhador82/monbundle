@@ -81,18 +81,26 @@ func RenderLAChart() []byte {
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
+				Name:    "1m",
 				XValues: data1mTS,
 				YValues: data1mVal,
 			},
 			chart.TimeSeries{
+				Name:    "5m",
 				XValues: data5mTS,
 				YValues: data5mVal,
 			},
 			chart.TimeSeries{
+				Name:    "15m",
 				XValues: data15mTS,
 				YValues: data15mVal,
 			},
 		},
+	}
+
+	// add legend
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
 	}
 
 	buffer := bytes.NewBuffer([]byte{})
