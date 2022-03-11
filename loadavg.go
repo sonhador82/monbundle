@@ -76,7 +76,7 @@ func RenderLAChart() []byte {
 		XAxis: chart.XAxis{
 			ValueFormatter: chart.TimeMinuteValueFormatter,
 			Style: chart.Style{
-				FontSize: 6.0,
+				FontSize: 8.0,
 			},
 		},
 		Series: []chart.Series{

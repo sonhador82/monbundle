@@ -1,15 +1,22 @@
 package monbundle
 
 import (
+	"bytes"
 	"fmt"
+	"log"
+	"os"
 	"strings"
+	"time"
+
+	"github.com/wcharczuk/go-chart/v2"
 )
 
 type namesResult struct {
 	Name string
 }
 
-func GetMetricsDevs() {
+/// удалить?
+func getMetricsDevs() []string {
 	var result []namesResult
 	db := dbInst.GetDB()
 	db.Raw("SELECT DISTINCT name FROM counter_metrics").Scan(&result)
@@ -20,60 +27,94 @@ func GetMetricsDevs() {
 			names = append(names, item.Name)
 		}
 	}
-	fmt.Println(names)
+	return names
+}
+
+type devQueryResult struct {
+	ReadBytes    []CounterMetric
+	WrittenBytes []CounterMetric
+}
+
+func getDiskMetrics(devName string) *devQueryResult {
+	db := dbInst.GetDB()
+	var resultRead []CounterMetric
+	var resultWritten []CounterMetric
+	filter := fmt.Sprintf("disk_%s_read_bytes", devName)
+	db.Debug().Where("name = ?", filter).Order("ts").Find(&resultRead)
+	filter = fmt.Sprintf("disk_%s_written_bytes", devName)
+	db.Debug().Where("name = ?", filter).Order("ts").Find(&resultWritten)
+	return &devQueryResult{
+		ReadBytes:    resultRead,
+		WrittenBytes: resultWritten,
+	}
 
 }
 
-// func getSeries() {
-// 	const name = "disk_sdc_read_bytes"
-// 	dbConn := monbundle.DbInst().GetDB()
-// 	var m []monbundle.CounterMetric
-// 	dbConn.Debug().Where("name = ?", name).Order("ts").Find(&m)
-// 	fmt.Println(m[0])
-// 	fmt.Println(m[len(m)-1])
-// 	// делаем дельту? берем текущий + следующий и делим дельту на кол-во секунд в промежутке?
-// 	fmt.Printf("len %v\n", len(m))
+type ChartData struct {
+	Values []float64
+	TS     []time.Time
+}
 
-// 	chartDataTs := make([]time.Time, 0)
-// 	chartDataVal := make([]float64, 0)
+func prepSeriesForChart(m []CounterMetric) *ChartData {
+	chartDataTs := make([]time.Time, 0)
+	chartDataVal := make([]float64, 0)
 
-// 	for index := range m[:len(m)-1] {
-// 		deltaTS := m[index+1].TS.Sub(m[index].TS)
-// 		deltaVal := m[index+1].Value - m[index].Value
-// 		var avgValPerSec float64 = float64(deltaVal / uint64(deltaTS.Seconds()))
-// 		fmt.Printf("DeltaTS: %v, DeltaVal: %v\n", deltaTS.Seconds(), deltaVal)
-// 		fmt.Printf("avgPerSec: %v\n", avgValPerSec)
-// 		chartDataTs = append(chartDataTs, m[index].TS)
-// 		chartDataVal = append(chartDataVal, avgValPerSec)
-// 	}
+	for index := range m[:len(m)-1] {
+		deltaTS := m[index+1].TS.Sub(m[index].TS)
+		deltaVal := m[index+1].Value - m[index].Value
+		var avgValPerSec float64 = float64(deltaVal / uint64(deltaTS.Seconds()))
+		chartDataTs = append(chartDataTs, m[index].TS)
+		chartDataVal = append(chartDataVal, avgValPerSec)
+	}
+	return &ChartData{
+		Values: chartDataVal,
+		TS:     chartDataTs,
+	}
+}
 
-// 	graph := chart.Chart{
-// 		Height: 200,
-// 		Width:  480,
-// 		Title:  "Disk readbytes/sec",
-// 		XAxis: chart.XAxis{
-// 			ValueFormatter: chart.TimeMinuteValueFormatter,
-// 			Style: chart.Style{
-// 				FontSize: 6.0,
-// 			},
-// 		},
-// 		Series: []chart.Series{
-// 			chart.TimeSeries{
-// 				Name:    "readbytes/sec",
-// 				XValues: chartDataTs,
-// 				YValues: chartDataVal,
-// 			},
-// 		},
-// 	}
+// disk_dm-1_read_bytes
+func RenderDiskChart(devName string) []byte {
+	devMetrics := getDiskMetrics(devName)
+	readChartData := prepSeriesForChart(devMetrics.ReadBytes)
+	writtenChartData := prepSeriesForChart(devMetrics.WrittenBytes)
 
-// 	buffer := bytes.NewBuffer([]byte{})
-// 	err := graph.Render(chart.PNG, buffer)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		os.Exit(1)
-// 	}
+	graph := chart.Chart{
+		Width:  480,
+		Height: 200,
+		Title:  fmt.Sprintf("%s readbytes/sec", devName),
+		TitleStyle: chart.Style{
+			FontSize: 8.0,
+		},
+		XAxis: chart.XAxis{
 
-// 	os.WriteFile("test.png", buffer.Bytes(), 0644)
-// 	//return buffer.Bytes()
+			ValueFormatter: chart.TimeMinuteValueFormatter,
+			Style: chart.Style{
+				FontSize: 8.0,
+			},
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				Name:    "readBytes/sec",
+				XValues: readChartData.TS,
+				YValues: readChartData.Values,
+			},
+			chart.TimeSeries{
+				Name:    "writtenBytes/sec",
+				XValues: writtenChartData.TS,
+				YValues: writtenChartData.Values,
+			},
+		},
+	}
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
+	}
 
-// }
+	buffer := bytes.NewBuffer([]byte{})
+	err := graph.Render(chart.PNG, buffer)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	return buffer.Bytes()
+
+}

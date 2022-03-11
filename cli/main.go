@@ -11,10 +11,12 @@ import (
 
 const scanFreq = time.Second * 5
 
+var DiskDev = os.Getenv("DISK_DEV")
+var NetDev = os.Getenv("NETSTAT_DEV")
+
 func runNetStat() {
-	netDev := os.Getenv("NETSTAT_DEV")
 	for {
-		netstat := monbundle.LoadNetDevStat(netDev)
+		netstat := monbundle.LoadNetDevStat(NetDev)
 		fmt.Println(netstat)
 		monbundle.DbInst().UpdateCounterMetrics(netstat)
 		time.Sleep(scanFreq)
@@ -40,6 +42,10 @@ func diskStats() {
 }
 
 func main() {
+	if DiskDev == "" {
+		log.Fatal("Export DISK_DEV env variable for disk metrics, ex: DISK_DEV=sda")
+		os.Exit(1)
+	}
 
 	wg := sync.WaitGroup{}
 

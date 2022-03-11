@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	monbundle.GetMetricsDevs()
+	monbundle.RenderDiskChart("sdc")
 }

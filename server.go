@@ -2,7 +2,6 @@ package monbundle
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"image/draw"
 	"image/png"
@@ -15,15 +14,20 @@ func prepGlobChart() []byte {
 	chartData := RenderLAChart()
 	buffer := bytes.NewBuffer(chartData)
 
-	img, format, err := image.Decode(buffer)
+	img, _, err := image.Decode(buffer)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("format: %s", format)
-
+	diskChart := RenderDiskChart(os.Getenv("DISK_DEV")) // !TODO зарефачить это говно
+	buffer2 := bytes.NewBuffer(diskChart)
+	diskImg, _, err := image.Decode(buffer2)
+	if err != nil {
+		log.Fatal(err)
+	}
 	bigImg := image.NewRGBA(image.Rect(0, 0, 1920, 1080))
 	draw.Draw(bigImg, image.Rect(0, 0, 480, 200), img, image.Point{0, 0}, draw.Over)
+	draw.Draw(bigImg, image.Rect(480, 0, 960, 200), diskImg, image.Point{0, 0}, draw.Over)
 
 	var bbuf []byte
 	buf := bytes.NewBuffer(bbuf)
