@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  monbundle:
+    build: .
+    ports:
+      - 8000:8000
+    environment:
+      DISK_DEV: sda
